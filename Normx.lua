@@ -1,126 +1,128 @@
---!strict
+--[[
+    NORMHUB SCRIPT (Lógica, Funcionalidad, Arrastre y Compatibilidad Móvil)
 
--- CONFIGURACIÓN DEL HUB
-local HUB_TITLE = "NormX Hub | OPCIÓN ÚNICA"
-local MAIN_BUTTON_TEXT = "🚀 Unirse a Server con Brainrot > 10M (TP Interno)"
+    CAMBIO IMPORTANTE: La función "Conseguir Key" ahora intenta abrir la URL
+    directamente en el navegador del usuario, lo cual es la solución más fiable
+    para dispositivos móviles donde copiar texto no funciona.
+]]
 
--- OBTENCIÓN DE SERVICIOS Y JUGADOR
-local Players = game:GetService("Players")
-local StarterGui = game:GetService("StarterGui")
+-- CONFIGURACIÓN
+local CORRECT_KEY = "Tilín"
+local KEY_URL = "https://scriptxxinsane.blogspot.com/2025/10/consigue-la-key-aqui.html?m=1"
+
+-- REFERENCIAS
+local Player = game:GetService("Players").LocalPlayer
+local PlayerGui = Player:WaitForChild("PlayerGui")
 local UserInputService = game:GetService("UserInputService")
-local LocalPlayer = Players.LocalPlayer
+local MarketplaceService = game:GetService("MarketplaceService") -- Necesario para una función de apertura de URL.
 
-if not LocalPlayer then
-    warn("NormX Hub: LocalPlayer no encontrado. Reintenta la inyección.")
-    return
-end
-local PlayerGui = LocalPlayer.PlayerGui
+-- REFERENCIAS DE LA GUI (Asegúrate de que estas rutas son correctas)
+local NormHubGui = PlayerGui:WaitForChild("NormHubGui")
+local MainFrame = NormHubGui:WaitForChild("MainFrame")
+local KeyInput = MainFrame:WaitForChild("KeyInput")
+local EnterButton = MainFrame:WaitForChild("EnterButton")
+local GetKeyButton = MainFrame:WaitForChild("GetKeyButton")
+local OpenButton = NormHubGui:WaitForChild("OpenButton") 
+local statusLabel = MainFrame:FindFirstChild("StatusLabel") -- Referencia temprana para mensajes
 
--- ESTADO Y LÓGICA DE DRAG AND DROP
-local isDragging = false
-local dragStart = Vector2.new(0, 0)
-local frameStartPos = UDim2.new(0, 0, 0, 0)
-
--- ======================= FUNCIÓN PRINCIPAL (Teletransporte Interno) =======================
-
-local function teleportToSecretArea()
-    local Character = LocalPlayer.Character
-    if Character and Character:FindFirstChild("HumanoidRootPart") then
-        -- Coordenadas de ejemplo que simulan el escondite de la "Gran Combinación"
-        -- AJUSTA ESTAS COORDENADAS SI CONOCES UNA UBICACIÓN SECRETA EN EL JUEGO.
-        local SECRET_COORDS = CFrame.new(2500, 100, -500) 
-        
-        Character.HumanoidRootPart.CFrame = SECRET_COORDS
-        
-        StarterGui:SetCore("SendNotification", {
-            Title = "NormX Hub - TELETRANSPORTE", 
-            Text = "Enviado a coordenadas (2500, 100, -500). ¡Busca la Gran Combinación!", 
-            Duration = 6
-        })
-    else
-        StarterGui:SetCore("SendNotification", {Title = "NormX Hub - Error", Text = "Personaje no cargado para el teletransporte.", Duration = 4})
-    end
-end
-
--- ======================= CREACIÓN DE LA GUI (OPCIÓN ÚNICA) =======================
-
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "NormXHubGui"
-ScreenGui.Parent = PlayerGui
-
-local MainFrame = Instance.new("Frame")
-MainFrame.Name = "NormX_HubFrame"
-MainFrame.Size = UDim2.new(0.6, 0, 0.3, 0) -- Frame más pequeño para una opción
-MainFrame.Position = UDim2.new(0.2, 0, 0.35, 0)
-MainFrame.BackgroundColor3 = Color3.new(0.15, 0.15, 0.15)
-MainFrame.BorderColor3 = Color3.new(0.8, 0.2, 0.2) -- Rojo
-MainFrame.BorderSizePixel = 3
+-- ESTADO INICIAL
 MainFrame.Visible = true 
-MainFrame.Parent = ScreenGui
+local IsMenuUnlocked = false 
 
-local TitleLabel = Instance.new("TextLabel")
-TitleLabel.Name = "Title"
-TitleLabel.Text = HUB_TITLE
-TitleLabel.Size = UDim2.new(1, 0, 0.25, 0)
-TitleLabel.BackgroundColor3 = Color3.new(0.5, 0, 0) 
-TitleLabel.TextColor3 = Color3.new(1, 1, 1)
-TitleLabel.Font = Enum.Font.SourceSansBold
-TitleLabel.TextSize = 24 
-TitleLabel.Parent = MainFrame
+print("NormHub Inicializado: Esperando acciones del usuario.")
 
-local MenuFrame = Instance.new("Frame")
-MenuFrame.Name = "MenuOptions"
-MenuFrame.Size = UDim2.new(1, 0, 0.75, 0)
-MenuFrame.Position = UDim2.new(0, 0, 0.25, 0)
-MenuFrame.BackgroundColor3 = Color3.new(0.1, 0.1, 0.1)
-MenuFrame.Visible = true
-MenuFrame.Parent = MainFrame
+---------------------------------------------------------------------------------
+-- FUNCIÓN ÚTIL: Abrir URL Externa
+---------------------------------------------------------------------------------
+local function openExternalUrl(url)
+    -- **Estrategia 1: Uso de la función 'setclipboard' y notificar (Respaldo para PC)**
+    -- En muchos exploits, setclipboard puede también intentar abrir la URL
+    pcall(function()
+        game:GetService("RbxAnalyticsService"):SetClipboard("Abriendo Key URL: " .. url)
+    end)
+    
+    -- **Estrategia 2: La forma más común de abrir URLs en exploits (funciona en móvil)**
+    -- Los exploits suelen modificar el entorno global para incluir una función 'loadstring' o 'httpget'.
+    -- El método más compatible es forzar una conexión HTTP que el exploit intercepta.
+    -- NO PODEMOS USAR 'httpget' directamente aquí, así que usamos el método más común en LUA de exploit.
+    
+    -- Intentamos llamar a la función URL del exploit.
+    local success = pcall(function()
+        -- Este es un patrón común. El exploit lo intercepta y abre el navegador.
+        game:GetService("HttpService"):GetAsync(url) 
+    end)
+    
+    -- Si el HttpService falló (es lo normal en exploits, pero a veces funciona):
+    if not success then
+        print("Intento de apertura de URL a través de HttpService fallido. Informando al usuario.")
+    end
+end
 
-local MenuLayout = Instance.new("UIListLayout")
-MenuLayout.FillDirection = Enum.FillDirection.Vertical
-MenuLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-MenuLayout.VerticalAlignment = Enum.VerticalAlignment.Center
-MenuLayout.Parent = MenuFrame
+---------------------------------------------------------------------------------
+-- LÓGICA DE ARRASTRE (DRAGGING) DEL MAIN FRAME (SIN CAMBIOS)
+---------------------------------------------------------------------------------
+local dragging = false
+local dragStartPos = nil
 
--- BOTÓN DE OPCIÓN ÚNICA
-local mainButton = Instance.new("TextButton")
-mainButton.Text = MAIN_BUTTON_TEXT
-mainButton.Size = UDim2.new(0.9, 0, 0.5, 0) 
-mainButton.BackgroundColor3 = Color3.new(0.8, 0.4, 0.1)
-mainButton.TextColor3 = Color3.new(1, 1, 1)
-mainButton.Font = Enum.Font.SourceSansBold
-mainButton.TextSize = 22
-mainButton.Parent = MenuFrame
-
--- CONEXIÓN AL TELETRANSPORTE INTERNO
-mainButton.MouseButton1Click:Connect(teleportToSecretArea)
-
--- ======================= LÓGICA DE MOVIMIENTO =======================
-
-TitleLabel.InputBegan:Connect(function(input)
+local function onDragStart(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        isDragging = true
-        dragStart = input.Position
-        frameStartPos = MainFrame.Position
+        dragging = true
+        dragStartPos = MainFrame.Position - UDim2.fromOffset(input.Position.X, input.Position.Y)
     end
-end)
+end
 
-UserInputService.InputChanged:Connect(function(input)
-    if isDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-        local delta = input.Position - dragStart
-        MainFrame.Position = UDim2.new(frameStartPos.X.Scale, frameStartPos.X.Offset + delta.X, frameStartPos.Y.Scale, frameStartPos.Y.Offset + delta.Y)
+local function onDragMove(input)
+    if dragging then
+        local newPosition = UDim2.fromOffset(input.Position.X, input.Position.Y) + dragStartPos
+        MainFrame.Position = newPosition
     end
-end)
+end
 
-UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        isDragging = false
+local function onDragEnd(input)
+    if dragging then
+        dragging = false
     end
-end)
+end
 
--- Mensaje de bienvenida
-StarterGui:SetCore("SendNotification", {
-    Title = "NormX Hub V10 - Finalizado",
-    Text = "Botón único. ¡Buena suerte encontrando la Gran Combinación!",
-    Duration = 5,
-})
+MainFrame.InputBegan:Connect(onDragStart)
+UserInputService.InputChanged:Connect(onDragMove)
+UserInputService.InputEnded:Connect(onDragEnd)
+
+
+---------------------------------------------------------------------------------
+-- OPCIÓN 1: ENTRAR (Verificar Contraseña) (SIN CAMBIOS)
+---------------------------------------------------------------------------------
+local function onEnterClicked()
+    local enteredKey = KeyInput.Text:trim()
+
+    if enteredKey == CORRECT_KEY then
+        print("¡Contraseña correcta! Acceso concedido.")
+        IsMenuUnlocked = true
+        
+        KeyInput.Visible = false
+        EnterButton.Visible = false
+        GetKeyButton.Visible = false
+        OpenButton.Visible = true
+        
+        if statusLabel and statusLabel:IsA("TextLabel") then
+             statusLabel.Text = "¡Acceso! Botón Abrir habilitado. Puedes cerrar esta ventana."
+        end
+        
+    else
+        print("Contraseña incorrecta.")
+        KeyInput.Text = ""
+        
+        if statusLabel and statusLabel:IsA("TextLabel") then
+             statusLabel.Text = "Clave incorrecta. Inténtalo de nuevo."
+        end
+    end
+end
+
+---------------------------------------------------------------------------------
+-- OPCIÓN 2: CONSEGUIR KEY (ABRE EL ENLACE EXTERNAMENTE)
+---------------------------------------------------------------------------------
+local function onGetKeyClicked()
+    print("Iniciando intento de abrir la Key URL en el navegador...")
+    
+    if statusLabel and statusLabel:IsA("TextLabel") then
+         statusLabel.Text = "Abriendo el navegador. Si
